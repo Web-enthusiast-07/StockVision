@@ -8,6 +8,7 @@ import { ThemeProvider } from "./components/theme-provider";
 import Landing from "./pages/Landing";
 import DashboardPage from "./pages/DashboardPage";
 import NotFound from "./pages/NotFound";
+import { Analytics } from '@vercel/analytics/react';
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,7 @@ const App = () => (
         </BrowserRouter>
       </TooltipProvider>
     </ThemeProvider>
+    <Analytics />
   </QueryClientProvider>
 );
 
