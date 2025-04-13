@@ -545,7 +545,7 @@ export default function Landing() {
                   <Badge variant="outline" className="font-medium text-sm self-start sm:self-auto bg-gradient-to-r from-blue-400 to-purple-500">Enterprise</Badge>
                 </div>
                 <p className="text-xl font-bold mt-2">
-                  r most advanced AI prediction platform, trained on <span className="text-purple-500 font-extrabold">20 years</span> of historical stock data
+                Our most advanced ML prediction Model, trained on <span className="text-purple-500 font-extrabold">20 years</span> of historical stock data.
                 </p>
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -575,7 +575,7 @@ export default function Landing() {
                   <ul className="space-y-3">
                     <li className="flex items-start gap-2">
                       <CheckCircle className="h-6 w-6 text-green-500 flex-shrink-0 mt-0.5" />
-                      <span className="font-medium">API access for institutional integration</span>
+                      <span className="font-medium"> Pattern Recognition Engine</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="h-6 w-6 text-green-500 flex-shrink-0 mt-0.5" />
@@ -583,7 +583,7 @@ export default function Landing() {
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="h-6 w-6 text-green-500 flex-shrink-0 mt-0.5" />
-                      <span className="font-medium">Priority feature development</span>
+                      <span className="font-medium">Get Personal Guidance from Top Market Minds</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="h-6 w-6 text-green-500 flex-shrink-0 mt-0.5" />
