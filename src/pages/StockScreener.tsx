@@ -684,3 +684,5 @@ export default function StockScreener() {
     </div>
   );
 }
+
+export { StockScreener }
