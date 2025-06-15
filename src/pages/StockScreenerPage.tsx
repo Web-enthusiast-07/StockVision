@@ -1,4 +1,4 @@
-import { Dashboard } from "@/components/dashboard";
+import { StockScreener } from "@/pages/StockScreener";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -10,11 +10,11 @@ import {
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
-export default function DashboardPage() {
+export default function StockScreenerPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const isMobile = useIsMobile();
   const location = useLocation();
-  const [activeSection, setActiveSection] = useState("dashboard");
+  const [activeSection, setActiveSection] = useState("screener");
   
   useEffect(() => {
     if (isMobile) {
@@ -25,12 +25,11 @@ export default function DashboardPage() {
   }, [isMobile]);
   
   useEffect(() => {
-    // Determine active section based on the URL hash
-    const hash = location.hash.replace('#', '');
-    
+    // Determine active section based on the URL
     if (location.pathname === "/") {
       setActiveSection("home");
     } else if (location.pathname === "/dashboard") {
+      const hash = location.hash.replace('#', '');
       if (hash === "performance") {
         setActiveSection("performance");
       } else if (hash === "portfolio") {
@@ -147,7 +146,6 @@ export default function DashboardPage() {
             </Link>
           </li>
           </ul>
-     
         </nav>
       </div>
 
@@ -171,11 +169,11 @@ export default function DashboardPage() {
               )}
             </Button>
           </div>
-          <h1 className="text-xl font-extrabold">Dashboard</h1>
+          <h1 className="text-xl font-extrabold">Stock Screener</h1>
           <ThemeToggle />
         </header>
         <main className="flex-1 overflow-y-auto">
-          <Dashboard />
+          <StockScreener />
         </main>
       </div>
       

@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "./components/theme-provider";
 import Landing from "./pages/Landing";
 import DashboardPage from "./pages/DashboardPage";
+import StockScreener from "./pages/StockScreener";
 import NotFound from "./pages/NotFound";
 import { Analytics } from '@vercel/analytics/react';
 import Preloader from "@/components/Preloder"; 
@@ -39,6 +40,7 @@ const App = () => {
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/screener" element={<StockScreener />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
