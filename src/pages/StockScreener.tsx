@@ -9,10 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { useStockData, EnhancedStockData } from "@/hooks/useStockData";
 import { 
   Search, 
   Filter, 
@@ -25,10 +22,7 @@ import {
   RefreshCw,
   Download,
   Star,
-  StarOff,
-  AlertCircle,
-  Wifi,
-  WifiOff
+  StarOff
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -47,46 +41,86 @@ import {
   Cell
 } from "recharts";
 
-export default function StockScreener() {
-  const { 
-    stocks, 
-    loading, 
-    error, 
-    refreshData, 
-    searchStocks, 
-    getStockHistory, 
-    marketStatus 
-  } = useStockData();
+// Mock stock data - In production, this would come from an API
+const generateMockStockData = () => {
+  const sectors = ['Technology', 'Healthcare', 'Finance', 'Energy', 'Consumer', 'Industrial', 'Real Estate', 'Utilities'];
+  const companies = [
+    { symbol: 'AAPL', name: 'Apple Inc.', sector: 'Technology' },
+    { symbol: 'MSFT', name: 'Microsoft Corporation', sector: 'Technology' },
+    { symbol: 'GOOGL', name: 'Alphabet Inc.', sector: 'Technology' },
+    { symbol: 'AMZN', name: 'Amazon.com Inc.', sector: 'Consumer' },
+    { symbol: 'TSLA', name: 'Tesla Inc.', sector: 'Consumer' },
+    { symbol: 'NVDA', name: 'NVIDIA Corporation', sector: 'Technology' },
+    { symbol: 'META', name: 'Meta Platforms Inc.', sector: 'Technology' },
+    { symbol: 'JPM', name: 'JPMorgan Chase & Co.', sector: 'Finance' },
+    { symbol: 'JNJ', name: 'Johnson & Johnson', sector: 'Healthcare' },
+    { symbol: 'V', name: 'Visa Inc.', sector: 'Finance' },
+    { symbol: 'PG', name: 'Procter & Gamble Co.', sector: 'Consumer' },
+    { symbol: 'UNH', name: 'UnitedHealth Group Inc.', sector: 'Healthcare' },
+    { symbol: 'HD', name: 'Home Depot Inc.', sector: 'Consumer' },
+    { symbol: 'MA', name: 'Mastercard Inc.', sector: 'Finance' },
+    { symbol: 'BAC', name: 'Bank of America Corp.', sector: 'Finance' },
+    { symbol: 'XOM', name: 'Exxon Mobil Corporation', sector: 'Energy' },
+    { symbol: 'ABBV', name: 'AbbVie Inc.', sector: 'Healthcare' },
+    { symbol: 'KO', name: 'Coca-Cola Company', sector: 'Consumer' },
+    { symbol: 'PFE', name: 'Pfizer Inc.', sector: 'Healthcare' },
+    { symbol: 'AVGO', name: 'Broadcom Inc.', sector: 'Technology' }
+  ];
 
-  const [filteredStocks, setFilteredStocks] = useState<EnhancedStockData[]>([]);
+  return companies.map(company => {
+    const basePrice = Math.random() * 300 + 50;
+    const change = (Math.random() - 0.5) * 20;
+    const changePercent = (change / basePrice) * 100;
+    const volume = Math.floor(Math.random() * 10000000) + 1000000;
+    const marketCap = Math.floor(Math.random() * 2000) + 100;
+    const pe = Math.random() * 40 + 5;
+    const dividend = Math.random() * 5;
+    
+    // Generate historical data for charts
+    const history = [];
+    let currentPrice = basePrice;
+    for (let i = 30; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      currentPrice += (Math.random() - 0.5) * 5;
+      history.push({
+        date: date.toISOString().split('T')[0],
+        price: Math.max(currentPrice, 1),
+        volume: Math.floor(Math.random() * 5000000) + 500000
+      });
+    }
+
+    return {
+      ...company,
+      price: parseFloat(basePrice.toFixed(2)),
+      change: parseFloat(change.toFixed(2)),
+      changePercent: parseFloat(changePercent.toFixed(2)),
+      volume,
+      marketCap: `${marketCap.toFixed(1)}B`,
+      marketCapValue: marketCap,
+      pe: parseFloat(pe.toFixed(2)),
+      dividend: parseFloat(dividend.toFixed(2)),
+      history,
+      isFavorite: Math.random() > 0.7
+    };
+  });
+};
+
+export default function StockScreener() {
+  const [stocks, setStocks] = useState(generateMockStockData());
+  const [filteredStocks, setFilteredStocks] = useState(stocks);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSector, setSelectedSector] = useState("all");
-  const [priceRange, setPriceRange] = useState([0, 1000]);
-  const [marketCapRange, setMarketCapRange] = useState([0, 3000]);
-  const [sortBy, setSortBy] = useState("marketCapValue");
+  const [priceRange, setPriceRange] = useState([0, 500]);
+  const [marketCapRange, setMarketCapRange] = useState([0, 2000]);
+  const [sortBy, setSortBy] = useState("marketCap");
   const [sortOrder, setSortOrder] = useState("desc");
-  const [selectedStock, setSelectedStock] = useState<EnhancedStockData | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [searchResults, setSearchResults] = useState<EnhancedStockData[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
+  const [selectedStock, setSelectedStock] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const sectors = useMemo(() => {
     const uniqueSectors = [...new Set(stocks.map(stock => stock.sector))];
     return uniqueSectors.sort();
-  }, [stocks]);
-
-  // Update price and market cap ranges based on available data
-  useEffect(() => {
-    if (stocks.length > 0) {
-      const prices = stocks.map(s => s.price);
-      const marketCaps = stocks.map(s => s.marketCapValue);
-      
-      const maxPrice = Math.max(...prices);
-      const maxMarketCap = Math.max(...marketCaps);
-      
-      setPriceRange(prev => [prev[0], Math.max(prev[1], Math.ceil(maxPrice))]);
-      setMarketCapRange(prev => [prev[0], Math.max(prev[1], Math.ceil(maxMarketCap))]);
-    }
   }, [stocks]);
 
   // Filter and sort stocks
@@ -103,12 +137,17 @@ export default function StockScreener() {
 
     // Sort stocks
     filtered.sort((a, b) => {
-      let aValue = a[sortBy as keyof EnhancedStockData];
-      let bValue = b[sortBy as keyof EnhancedStockData];
+      let aValue = a[sortBy];
+      let bValue = b[sortBy];
+      
+      if (sortBy === 'marketCapValue') {
+        aValue = a.marketCapValue;
+        bValue = b.marketCapValue;
+      }
       
       if (typeof aValue === 'string') {
         aValue = aValue.toLowerCase();
-        bValue = (bValue as string).toLowerCase();
+        bValue = bValue.toLowerCase();
       }
       
       if (sortOrder === 'asc') {
@@ -121,39 +160,23 @@ export default function StockScreener() {
     setFilteredStocks(filtered);
   }, [stocks, searchTerm, selectedSector, priceRange, marketCapRange, sortBy, sortOrder]);
 
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    try {
-      await refreshData();
-    } finally {
-      setIsRefreshing(false);
-    }
+  const refreshData = () => {
+    setIsLoading(true);
+    setTimeout(() => {
+      setStocks(generateMockStockData());
+      setIsLoading(false);
+    }, 1000);
   };
 
-  const handleSearch = async (query: string) => {
-    if (query.length < 2) {
-      setSearchResults([]);
-      return;
-    }
-
-    setIsSearching(true);
-    try {
-      const results = await searchStocks(query);
-      setSearchResults(results);
-    } catch (error) {
-      console.error('Search failed:', error);
-    } finally {
-      setIsSearching(false);
-    }
+  const toggleFavorite = (symbol) => {
+    setStocks(prev => prev.map(stock => 
+      stock.symbol === symbol 
+        ? { ...stock, isFavorite: !stock.isFavorite }
+        : stock
+    ));
   };
 
-  const toggleFavorite = (symbol: string) => {
-    // This would typically update a user's favorites in a database
-    // For now, we'll just update the local state
-    console.log(`Toggle favorite for ${symbol}`);
-  };
-
-  const handleSort = (column: string) => {
+  const handleSort = (column) => {
     if (sortBy === column) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
     } else {
@@ -162,22 +185,14 @@ export default function StockScreener() {
     }
   };
 
-  const getSortIcon = (column: string) => {
+  const getSortIcon = (column) => {
     if (sortBy !== column) return null;
     return sortOrder === 'asc' ? <ArrowUpIcon className="h-4 w-4" /> : <ArrowDownIcon className="h-4 w-4" />;
   };
 
-  const handleStockSelect = async (stock: EnhancedStockData) => {
-    setSelectedStock(stock);
-    if (stock.history.length === 0) {
-      await getStockHistory(stock.symbol);
-    }
-  };
-
   // Chart data for market overview
   const sectorData = useMemo(() => {
-    const sectorStats: Record<string, { count: number; avgChange: number; totalMarketCap: number }> = {};
-    
+    const sectorStats = {};
     filteredStocks.forEach(stock => {
       if (!sectorStats[stock.sector]) {
         sectorStats[stock.sector] = { count: 0, avgChange: 0, totalMarketCap: 0 };
@@ -205,75 +220,22 @@ export default function StockScreener() {
     }));
   }, [filteredStocks]);
 
-  if (loading && stocks.length === 0) {
-    return (
-      <div className="container mx-auto px-4 py-6 space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <Skeleton className="h-8 w-48 mb-2" />
-            <Skeleton className="h-4 w-64" />
-          </div>
-          <div className="flex gap-2">
-            <Skeleton className="h-10 w-24" />
-            <Skeleton className="h-10 w-24" />
-          </div>
-        </div>
-        
-        <Card className="glass-card">
-          <CardHeader>
-            <Skeleton className="h-6 w-32" />
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-10 w-full" />
-              ))}
-            </div>
-            <Separator />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Skeleton className="h-6 w-full" />
-              <Skeleton className="h-6 w-full" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Skeleton className="h-96 w-full" />
-          <Skeleton className="h-96 w-full" />
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-extrabold text-gradient">Stock Screener</h1>
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <span>Live market data powered by Polygon.io</span>
-            {marketStatus ? (
-              <div className="flex items-center gap-1">
-                <Wifi className="h-4 w-4 text-green-500" />
-                <span className="text-xs">Connected</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1">
-                <WifiOff className="h-4 w-4 text-red-500" />
-                <span className="text-xs">Disconnected</span>
-              </div>
-            )}
-          </div>
+          <p className="text-muted-foreground">Discover and analyze stocks with advanced filtering</p>
         </div>
         <div className="flex gap-2">
           <Button 
             variant="outline" 
-            onClick={handleRefresh} 
-            disabled={isRefreshing || loading}
+            onClick={refreshData} 
+            disabled={isLoading}
             className="flex items-center gap-2"
           >
-            <RefreshCw className={cn("h-4 w-4", (isRefreshing || loading) && "animate-spin")} />
+            <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
             Refresh
           </Button>
           <Button variant="outline" className="flex items-center gap-2">
@@ -282,44 +244,6 @@ export default function StockScreener() {
           </Button>
         </div>
       </div>
-
-      {/* Error Alert */}
-      {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            {error}. Please try refreshing the data.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* Market Status */}
-      {marketStatus && (
-        <Card className="glass-card">
-          <CardContent className="pt-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-              <div>
-                <span className="font-medium">Market Status: </span>
-                <Badge variant="outline" className="ml-1">
-                  {marketStatus.exchanges?.nasdaq || 'Unknown'}
-                </Badge>
-              </div>
-              <div>
-                <span className="font-medium">NYSE: </span>
-                <Badge variant="outline" className="ml-1">
-                  {marketStatus.exchanges?.nyse || 'Unknown'}
-                </Badge>
-              </div>
-              <div>
-                <span className="font-medium">Server Time: </span>
-                <span className="text-muted-foreground">
-                  {marketStatus.serverTime ? new Date(marketStatus.serverTime).toLocaleTimeString() : 'Unknown'}
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Filters */}
       <Card className="glass-card">
@@ -339,35 +263,10 @@ export default function StockScreener() {
                 <Input
                   placeholder="Symbol or company name"
                   value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    handleSearch(e.target.value);
-                  }}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
                 />
-                {isSearching && (
-                  <RefreshCw className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
-                )}
               </div>
-              
-              {/* Search Results */}
-              {searchResults.length > 0 && searchTerm.length >= 2 && (
-                <div className="absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-y-auto">
-                  {searchResults.map((stock) => (
-                    <div
-                      key={stock.symbol}
-                      className="p-2 hover:bg-muted cursor-pointer border-b last:border-b-0"
-                      onClick={() => {
-                        setSearchTerm(stock.symbol);
-                        setSearchResults([]);
-                      }}
-                    >
-                      <div className="font-medium">{stock.symbol}</div>
-                      <div className="text-xs text-muted-foreground truncate">{stock.name}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
 
             {/* Sector */}
@@ -428,7 +327,7 @@ export default function StockScreener() {
               <Slider
                 value={priceRange}
                 onValueChange={setPriceRange}
-                max={Math.max(1000, Math.max(...stocks.map(s => s.price)))}
+                max={500}
                 min={0}
                 step={10}
                 className="w-full"
@@ -441,7 +340,7 @@ export default function StockScreener() {
               <Slider
                 value={marketCapRange}
                 onValueChange={setMarketCapRange}
-                max={Math.max(3000, Math.max(...stocks.map(s => s.marketCapValue)))}
+                max={2000}
                 min={0}
                 step={50}
                 className="w-full"
@@ -465,10 +364,7 @@ export default function StockScreener() {
             {/* Market Overview Chart */}
             <Card className="glass-card">
               <CardHeader>
-                <CardTitle>Price vs Performance</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Bubble size represents market cap
-                </p>
+                <CardTitle>Market Cap Distribution</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="h-80">
@@ -513,7 +409,7 @@ export default function StockScreener() {
             {/* Volume Chart */}
             <Card className="glass-card">
               <CardHeader>
-                <CardTitle>Trading Volume (Top 10)</CardTitle>
+                <CardTitle>Trading Volume</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="h-80">
@@ -583,7 +479,7 @@ export default function StockScreener() {
             {/* Sector Market Cap */}
             <Card className="glass-card">
               <CardHeader>
-                <CardTitle>Sector Market Cap Distribution</CardTitle>
+                <CardTitle>Sector Market Cap</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="h-80">
@@ -602,7 +498,7 @@ export default function StockScreener() {
                         tickFormatter={(value) => `${value}B`}
                       />
                       <Tooltip 
-                        formatter={(value) => [`${value.toFixed(1)}B`, 'Total Market Cap']}
+                        formatter={(value) => [`${value}B`, 'Total Market Cap']}
                       />
                       <Area 
                         type="monotone" 
@@ -620,100 +516,38 @@ export default function StockScreener() {
         </TabsContent>
 
         <TabsContent value="performance" className="space-y-6">
-          {selectedStock ? (
+          {selectedStock && (
             <Card className="glass-card">
               <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <div>
-                    <span>{selectedStock.symbol} - {selectedStock.name}</span>
-                    <div className="text-sm text-muted-foreground mt-1">
-                      Last updated: {new Date(selectedStock.lastUpdated).toLocaleString()}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-2xl font-bold">${selectedStock.price.toFixed(2)}</div>
-                    <div className={cn(
-                      "flex items-center gap-1",
-                      selectedStock.changePercent >= 0 ? "text-green-500" : "text-red-500"
-                    )}>
-                      {selectedStock.changePercent >= 0 ? (
-                        <TrendingUp className="h-4 w-4" />
-                      ) : (
-                        <TrendingDown className="h-4 w-4" />
-                      )}
-                      <span>
-                        {selectedStock.changePercent >= 0 ? "+" : ""}{selectedStock.changePercent.toFixed(2)}%
-                      </span>
-                    </div>
-                  </div>
-                </CardTitle>
+                <CardTitle>{selectedStock.symbol} - {selectedStock.name}</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                  <div>
-                    <div className="text-sm text-muted-foreground">Open</div>
-                    <div className="font-bold">${selectedStock.open.toFixed(2)}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">High</div>
-                    <div className="font-bold">${selectedStock.high.toFixed(2)}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Low</div>
-                    <div className="font-bold">${selectedStock.low.toFixed(2)}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Volume</div>
-                    <div className="font-bold">{(selectedStock.volume / 1000000).toFixed(1)}M</div>
-                  </div>
-                </div>
-                
-                {selectedStock.history.length > 0 ? (
-                  <div className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <RechartsLineChart data={selectedStock.history}>
-                        <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                        <XAxis 
-                          dataKey="date" 
-                          tick={{ fontSize: 12 }}
-                          tickFormatter={(value) => new Date(value).toLocaleDateString()}
-                        />
-                        <YAxis 
-                          tick={{ fontSize: 12 }}
-                          tickFormatter={(value) => `$${value}`}
-                          domain={['dataMin - 5', 'dataMax + 5']}
-                        />
-                        <Tooltip 
-                          formatter={(value) => [`$${Number(value).toFixed(2)}`, 'Price']}
-                          labelFormatter={(value) => new Date(value).toLocaleDateString()}
-                        />
-                        <Line 
-                          type="monotone" 
-                          dataKey="price" 
-                          stroke="#3b82f6" 
-                          strokeWidth={2}
-                          dot={false}
-                          activeDot={{ r: 6, fill: "#3b82f6" }}
-                        />
-                      </RechartsLineChart>
-                    </ResponsiveContainer>
-                  </div>
-                ) : (
-                  <div className="h-80 flex items-center justify-center">
-                    <div className="text-center">
-                      <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-2 text-muted-foreground" />
-                      <p className="text-muted-foreground">Loading historical data...</p>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ) : (
-            <Card className="glass-card">
-              <CardContent className="h-80 flex items-center justify-center">
-                <div className="text-center">
-                  <LineChart className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground">Select a stock from the table below to view its performance chart</p>
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RechartsLineChart data={selectedStock.history}>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                      <XAxis 
+                        dataKey="date" 
+                        tick={{ fontSize: 12 }}
+                        tickFormatter={(value) => new Date(value).toLocaleDateString()}
+                      />
+                      <YAxis 
+                        tick={{ fontSize: 12 }}
+                        tickFormatter={(value) => `$${value}`}
+                      />
+                      <Tooltip 
+                        formatter={(value) => [`$${value.toFixed(2)}`, 'Price']}
+                        labelFormatter={(value) => new Date(value).toLocaleDateString()}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="price" 
+                        stroke="#3b82f6" 
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                    </RechartsLineChart>
+                  </ResponsiveContainer>
                 </div>
               </CardContent>
             </Card>
@@ -773,8 +607,14 @@ export default function StockScreener() {
                           Market Cap {getSortIcon('marketCapValue')}
                         </div>
                       </TableHead>
-                      <TableHead className="text-right">High</TableHead>
-                      <TableHead className="text-right">Low</TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-muted/50 transition-colors text-right"
+                        onClick={() => handleSort('pe')}
+                      >
+                        <div className="flex items-center justify-end gap-1">
+                          P/E {getSortIcon('pe')}
+                        </div>
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -782,7 +622,7 @@ export default function StockScreener() {
                       <TableRow 
                         key={stock.symbol}
                         className="cursor-pointer hover:bg-muted/50 transition-colors"
-                        onClick={() => handleStockSelect(stock)}
+                        onClick={() => setSelectedStock(stock)}
                       >
                         <TableCell>
                           <Button
@@ -830,10 +670,7 @@ export default function StockScreener() {
                           {stock.marketCap}
                         </TableCell>
                         <TableCell className="text-right">
-                          ${stock.high.toFixed(2)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          ${stock.low.toFixed(2)}
+                          {stock.pe.toFixed(2)}
                         </TableCell>
                       </TableRow>
                     ))}
